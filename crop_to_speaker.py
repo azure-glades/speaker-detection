@@ -52,7 +52,24 @@ def associate_faces_with_speakers(
     for spk in ["SPEAKER_00", "SPEAKER_01"]:
         spk_to_face.setdefault(spk, 0 if spk.endswith("00") else 1)
     return spk_to_face
+# ------------------------------------------------------------------ #
+def letterbox_9_16(img):
+    h, w, _ = img.shape
+    target_w, target_h = 720, 1280
+    scale = min(target_h / h, target_w / w)
+    new_w, new_h = int(w * scale), int(h * scale)
+    resized = cv2.resize(img, (new_w, new_h))
 
+    top = (target_h - new_h) // 2
+    bottom = target_h - new_h - top
+    left = (target_w - new_w) // 2
+    right = target_w - new_w - left
+
+    letterboxed = cv2.copyMakeBorder(
+        resized, top, bottom, left, right,
+        cv2.BORDER_CONSTANT, value=(0, 0, 0)
+    )
+    return letterboxed
 
 # ------------------------------------------------------------------ #
 def main():
@@ -123,9 +140,11 @@ def main():
             if face_idx < len(boxes):
                 yslice, xslice = cropper.update(boxes[face_idx], img.shape)
                 cropped = img[yslice, xslice]
-                cropped = cv2.resize(cropped, (out_w, out_h))
+                #cropped = cv2.resize(cropped, (out_w, out_h))
+                cropped = letterbox_9_16(cropped)
             else:
-                cropped = cv2.resize(img, (out_w, out_h))
+                #cropped = cv2.resize(img, (out_w, out_h))
+                cropped = letterbox_9_16(cropped)
         else:
             cropped = cv2.resize(img, (out_w, out_h))
 
