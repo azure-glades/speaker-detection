@@ -17,7 +17,7 @@ class CropEngine:
     def __init__(
         self,
         fps: float = 30.0,
-        smooth_alpha: float = 0.15,
+        smooth_alpha: float = 0.05,
         max_velocity: float = 0.05,   # 5 % of frame width/height per frame
         margin_ratio: float = 0.20,   # extra margin around box
     ):
@@ -54,9 +54,9 @@ class CropEngine:
         box_w = (x2 - x1) * (1 + self.margin)
         box_h = (y2 - y1) * (1 + self.margin)
 
-        # 2. 16:9 aspect
-        crop_h = max(box_h, box_w * 9 / 16)
-        crop_w = crop_h * 16 / 9
+        # 2. 9:16 aspect
+        crop_w = max(box_w, box_h * 9 / 16)   # width dominates
+        crop_h = crop_w * 16 / 9              # height = width * 16/9
 
         target_scale = min(W / crop_w, H / crop_h)  # >1 means zoom-in
 

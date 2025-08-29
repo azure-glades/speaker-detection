@@ -32,36 +32,25 @@ def associate_faces_with_speakers(
     face_index is the left-to-right index returned by FaceTracker.
     """
     spk_to_face = {}
-    
     for start, end, spk in diar_segments:
         frame_start = int(start * fps)
         frame_end = int(end * fps)
-        
-        # Count which face index is most consistently present
-        face_presence = {}
-        total_frames = 0
-        
+        counts = {}
         for f in range(frame_start, min(frame_end, len(face_boxes_per_frame))):
             boxes = face_boxes_per_frame[f]
-            if len(boxes) >= 1:  # At least one face visible
-                total_frames += 1
-                # Count which face positions are occupied
-                for i in range(len(boxes)):
-                    face_presence[i] = face_presence.get(i, 0) + 1
-        
-        if total_frames > 0 and face_presence:
-            # Find the face index that appears most consistently
-            best_face_idx = max(face_presence, key=face_presence.get)
-            overlap_ratio = face_presence[best_face_idx] / total_frames
-            
-            if overlap_ratio >= min_overlap_ratio:
-                spk_to_face[spk] = best_face_idx
-    
-    # Fallback: speaker_0 -> left face (index 0), speaker_1 -> right face (index 1)
+            if len(boxes) == 1:
+                counts[0] = counts.get(0, 0) + 1
+            elif len(boxes) == 2:
+                counts[0] = counts.get(0, 0) + 1
+                counts[1] = counts.get(1, 0) + 1
+
+        if counts:
+            best_idx = max(counts, key=counts.get)
+            if counts[best_idx] / (frame_end - frame_start) >= 0.8:
+                spk_to_face[spk] = best_idx
+    # fallback: speaker_0 -> left face, speaker_1 -> right face
     for spk in ["SPEAKER_00", "SPEAKER_01"]:
-        if spk not in spk_to_face:
-            spk_to_face[spk] = 0 if spk.endswith("00") else 1
-            
+        spk_to_face.setdefault(spk, 0 if spk.endswith("00") else 1)
     return spk_to_face
 
 
