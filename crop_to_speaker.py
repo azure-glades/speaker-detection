@@ -53,7 +53,7 @@ def associate_faces_with_speakers(
         spk_to_face.setdefault(spk, 0 if spk.endswith("00") else 1)
     return spk_to_face
 # ------------------------------------------------------------------ #
-def letterbox_9_16(img):
+def letterbox_portrait(img):
     h, w, _ = img.shape
     target_w, target_h = 720, 1280
     scale = min(target_h / h, target_w / w)
@@ -77,7 +77,7 @@ def main():
     parser.add_argument("input", help="Input video file")
     parser.add_argument("output", help="Output video file")
     parser.add_argument("--token", required=True, help="HuggingFace token")
-    parser.add_argument("--resolution", default="1280x720", help="WxH output")
+    parser.add_argument("--resolution", default="720x1280", help="WxH output")
     args = parser.parse_args()
 
     # 0. Open containers -------------------------------------------------
@@ -127,6 +127,9 @@ def main():
         img = frame.to_ndarray(format="bgr24")
         boxes = face_boxes_per_frame[frame_idx]
 
+        # box for debugging
+        for x1, y1, x2, y2 in boxes:
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         # active speaker at this frame
         t = frame_idx / fps
         active_spk = None
@@ -141,10 +144,10 @@ def main():
                 yslice, xslice = cropper.update(boxes[face_idx], img.shape)
                 cropped = img[yslice, xslice]
                 #cropped = cv2.resize(cropped, (out_w, out_h))
-                cropped = letterbox_9_16(cropped)
+                cropped = letterbox_portrait(cropped)
             else:
                 #cropped = cv2.resize(img, (out_w, out_h))
-                cropped = letterbox_9_16(cropped)
+                cropped = letterbox_portrait(cropped)
         else:
             cropped = cv2.resize(img, (out_w, out_h))
 

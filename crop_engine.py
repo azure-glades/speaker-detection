@@ -55,8 +55,8 @@ class CropEngine:
         box_h = (y2 - y1) * (1 + self.margin)
 
         # 2. 9:16 aspect
-        crop_w = max(box_w, box_h * 9 / 16)   # width dominates
-        crop_h = crop_w * 16 / 9              # height = width * 16/9
+        crop_h = max(box_h, box_w * 16 / 9)   # width dominates
+        crop_w = crop_h * 9 / 16              # height = width * 16/9
 
         target_scale = min(W / crop_w, H / crop_h)  # >1 means zoom-in
 
