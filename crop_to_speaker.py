@@ -72,6 +72,49 @@ def letterbox_portrait(img):
     return letterboxed
 
 # ------------------------------------------------------------------ #
+def draw_debug_info(img, boxes, active_spk, spk2face, frame_idx, t, segments):
+    """Draw comprehensive debugging information on frame"""
+    h, w = img.shape[:2]
+    
+    # Draw face bounding boxes with indices
+    for i, (x1, y1, x2, y2) in enumerate(boxes):
+        # Different colors for different faces
+        color = (0, 255, 0) if i == 0 else (255, 0, 0)  # Green for face 0, Blue for face 1
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(img, f'Face {i}', (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+    
+    # Display frame info
+    cv2.putText(img, f'Frame: {frame_idx}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    cv2.putText(img, f'Time: {t:.2f}s', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    
+    # Display active speaker info
+    if active_spk:
+        cv2.putText(img, f'Active: {active_spk}', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+        if active_spk in spk2face:
+            face_idx = spk2face[active_spk]
+            cv2.putText(img, f'Tracking Face: {face_idx}', (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+        else:
+            cv2.putText(img, 'No face mapping', (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    else:
+        cv2.putText(img, 'No active speaker', (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    
+    # Display speaker-to-face mapping
+    mapping_text = f'Mapping: {spk2face}'
+    cv2.putText(img, mapping_text, (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+    
+    # Display current speaker segments for context
+    segment_info = []
+    for s, e, spk in segments:
+        if abs(t - s) < 2.0 or abs(t - e) < 2.0 or (s <= t <= e):  # Show nearby segments
+            status = "ACTIVE" if s <= t <= e else "NEAR"
+            segment_info.append(f"{spk}: {s:.1f}-{e:.1f}s {status}")
+            if len(segment_info) >= 3:  # Limit to 3 segments
+                break
+    
+    for i, info in enumerate(segment_info):
+        cv2.putText(img, info, (10, h - 50 - i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 100, 100), 1)
+
+# ------------------------------------------------------------------ #
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input video file")
@@ -127,9 +170,6 @@ def main():
         img = frame.to_ndarray(format="bgr24")
         boxes = face_boxes_per_frame[frame_idx]
 
-        # box for debugging
-        for x1, y1, x2, y2 in boxes:
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         # active speaker at this frame
         t = frame_idx / fps
         active_spk = None
@@ -137,6 +177,10 @@ def main():
             if s <= t < e:
                 active_spk = spk
                 break
+        
+        for x1, y1, x2, y2 in boxes:
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        draw_debug_info(img.copy(), boxes, active_spk, spk2face, frame_idx, t, segments)
 
         if active_spk and active_spk in spk2face:
             face_idx = spk2face[active_spk]
@@ -147,9 +191,11 @@ def main():
                 cropped = letterbox_portrait(cropped)
             else:
                 #cropped = cv2.resize(img, (out_w, out_h))
+                cv2.putText(img, 'WARNING: Face not found!', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                 cropped = letterbox_portrait(cropped)
         else:
-            cropped = cv2.resize(img, (out_w, out_h))
+            cv2.putText(img, 'INFO: No active speaker', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+            cropped = letterbox_portrait(img)
 
         new_frame = av.VideoFrame.from_ndarray(cropped, format="bgr24")
         for packet in v_out.encode(new_frame):
