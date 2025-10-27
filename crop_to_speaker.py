@@ -15,7 +15,7 @@ import numpy as np
 from speaker_diarizer import SpeakerDiarizer
 from face_tracker import FaceTracker
 from crop_engine import CropEngine
-
+from body_tracker import BodyTracker
 
 # ------------------------------------------------------------------ #
 def associate_faces_with_speakers(
@@ -149,7 +149,10 @@ def main():
     # 2. Pre-scan faces --------------------------------------------------
     print("Scanning faces …")
     in_container.seek(0)
+
     tracker = FaceTracker()
+    # tracker = BodyTracker()
+    
     face_boxes_per_frame = []
     for frame in in_container.decode(video=0):
         img = frame.to_ndarray(format="bgr24")
